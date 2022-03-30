@@ -1,1 +1,1 @@
-add_subdirectory(epppkep)
+add_subdirectory(eppkep)
