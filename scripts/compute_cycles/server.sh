@@ -1,0 +1,1 @@
+./compute_cycles -r 0 -x 10 -y 2 > out_server.txt

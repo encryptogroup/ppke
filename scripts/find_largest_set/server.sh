@@ -1,0 +1,1 @@
+./find_largest_set -r 0 -x 10 -y 2 > out_server.txt
