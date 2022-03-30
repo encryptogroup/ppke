@@ -19,7 +19,7 @@ uint32_t compute_cycles_circuit(e_role role, const std::string& address, uint16_
     std::cout << "\n\n#####\t#####\t#####\t#####\t#####" << std::endl;
     std::cout << "Number of cycles:\t" << result << "\tExpected:\t" << result_plain << std::endl;
     std::cout << "Number of cycles without duplicates:\t" << (int) result / (int) cycle_length << "\tExpected:\t" << (int) result_plain / (int) cycle_length << std::endl;
-    std::cout << "Maximumnumber of unique cycles (no shared vertices):\t" << (int) n_pairs / (int) cycle_length << std::endl;
+    std::cout << "Maximum number of unique cycles (no shared vertices):\t" << (int) n_pairs / (int) cycle_length << std::endl;
     
     return result;   
 }

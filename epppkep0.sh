@@ -7,7 +7,7 @@ for i in $pairs; do
 	echo "pair $i"
 	for j in $size; do
 		echo "cycle size: $j"
-		./epppkep -r $role -f 0 -x $i -z $size > outfile_r${role}_p${i}_c${j}.txt
+		./eppkep -r $role -f 0 -x $i -z $size > outfile_r${role}_p${i}_c${j}.txt
 	done;
 done
 
@@ -15,7 +15,7 @@ for i in $pairs; do
 	echo "pair $i"
 	for j in $size; do
 		echo "cycle size: $j"
-		./epppkep -r $role -f 1 -x $i -z $size > outfile_all_r${role}_p${i}_c${j}.txt
+		./eppkep -r $role -f 1 -x $i -z $size > outfile_all_r${role}_p${i}_c${j}.txt
 	done;
 done
 

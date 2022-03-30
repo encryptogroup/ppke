@@ -86,7 +86,7 @@ int main(int argc, char** argv) {
 	uint32_t bitlen = 32, nvals = 8, secparam = 128, nthreads = 1, n_pairs = 10, n_hla = 50, cycle_length = 3;
 	uint16_t port = 7766;
 	std::string address = "127.0.0.1";
-	std::string path = "../data_100/";
+	std::string path = "../data/input/data_1000/";
 	int32_t test_op = -1;
 	e_mt_gen_alg mt_alg = MT_OT;
 	bool factors = true;
