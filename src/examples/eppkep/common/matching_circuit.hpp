@@ -171,7 +171,7 @@ void prepareWritingCompGraphToFile(cmp_graph &comp_graph, CircuitW_p ac,
  * @param role Either SERVER or CLIENT
  * @param n_pairs Number of pairs
  */
-void writeCompGraphToFile(cmp_graph comp_graph, e_role role, uint32_t n_pairs);
+void writeCompGraphToFile(cmp_graph &comp_graph, e_role role, uint32_t n_pairs);
 
 
 

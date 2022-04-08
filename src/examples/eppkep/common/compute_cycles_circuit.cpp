@@ -2,6 +2,9 @@
 #include "../../../abycore/circuit/booleancircuits.h"
 #include "../../../abycore/sharing/sharing.h"
 
+// Json Lib
+#include "../../../extern/nlohmann_json/single_include/nlohmann/json.hpp"
+
 #include <exception>
 #include <fstream>
 #include <iostream>
@@ -9,17 +12,20 @@
 #include <sstream>
 #include <vector>
 
+using json = nlohmann::json;
+
 uint32_t compute_cycles_circuit(e_role role, const std::string& address, uint16_t port, seclvl seclvl,
 		        uint32_t bitlen, uint32_t nthreads, e_mt_gen_alg mt_alg, uint32_t n_pairs, uint32_t cycle_length) 
 {
     auto result = BuildComputeCyclesCircuit(role, address, port, seclvl, bitlen, nthreads, mt_alg, n_pairs, cycle_length);
-
+    
     auto result_plain = compute_number_of_cycles(n_pairs, cycle_length);
 
     std::cout << "\n\n#####\t#####\t#####\t#####\t#####" << std::endl;
-    std::cout << "Number of cycles:\t" << result << "\tExpected:\t" << result_plain << std::endl;
-    std::cout << "Number of cycles without duplicates:\t" << (int) result / (int) cycle_length << "\tExpected:\t" << (int) result_plain / (int) cycle_length << std::endl;
-    std::cout << "Maximum number of unique cycles (no shared vertices):\t" << (int) n_pairs / (int) cycle_length << std::endl;
+    std::cout << "Number of cycles:\t" << (int) result  << "\tExpected:\t" << (int) result_plain<< std::endl;
+    std::cout << "Number of unique cycles:\t" << (int) result / (int) cycle_length << "\tExpected:\t" << (int) result_plain / (int) cycle_length << std::endl;
+    // std::cout << "Number of cycles without duplicates:\t" << (int) result / (int) cycle_length << "\tExpected:\t" << (int) result_plain / (int) cycle_length << std::endl;
+    // std::cout << "Maximumnumber of unique cycles (no shared vertices):\t" << (int) n_pairs / (int) cycle_length << std::endl;
     
     return result;   
 }
@@ -38,7 +44,7 @@ uint32_t BuildComputeCyclesCircuit(e_role role, const std::string& address, uint
     CircuitW_p yaocirc = std::make_shared<CircuitWrapper>(sharings[S_YAO]->GetCircuitBuildRoutine());
     CircuitW_p boolcirc = std::make_shared<CircuitWrapper>(sharings[S_BOOL]->GetCircuitBuildRoutine());
 
-    auto s_comp_graph = readCompGraphFromFile(arithmcirc, role, bitlen, n_pairs);
+    auto s_comp_graph = readCompGraphFromFile(arithmcirc, role, bitlen, n_pairs); 
 
     // std::cout << "Read compatibility graph from file.\n" << std::endl;
 
@@ -79,34 +85,32 @@ uint32_t BuildComputeCyclesCircuit(e_role role, const std::string& address, uint
 
 cmp_graph readCompGraphFromFile(CircuitW_p ac, e_role role, uint32_t bitlen, uint32_t n_pairs) 
 {
-    std::vector<std::vector<share_p>> comp_graph;
+    cmp_graph s_cmp_graph;
 
     std::string roleString = "Client";
     if(role == SERVER) {
         roleString = "Server";
     }
-    std::ifstream infile("comp_graph_"+roleString+".txt");
-    std::string tmp;
+    std::ifstream infile("../data/output/comp_graph_"+roleString+".json");
 
-    // First,  informational line
-    infile >> tmp;
+    json jomp_graph;
+    infile >> jomp_graph;
+
+    if(((uint32_t) jomp_graph["n_pairs"]) != n_pairs) {
+        std::cout << "Number of pairs do not match!" <<std::endl;
+        return s_cmp_graph;
+    }
+    
+    json graph = jomp_graph["graph"];
     for(size_t i = 0; i < n_pairs; ++i) {
-        // n_pairs lines, each line contains n_pairs entries
-        size_t count_entries = 0;
-        std::vector<share_p> current_row;
-        std::string line;
-        infile >> line;
-        std::istringstream s_stream(line);
-        while(std::getline(s_stream, tmp, ',') && count_entries++ < n_pairs) {
-            if(tmp.empty()) {
-                continue;
-            }
-            current_row.push_back(ac->PutSharedINGate(static_cast<uint32_t>(std::stoul(tmp)), bitlen));
+        std::vector<share_p> row;
+        for(size_t j = 0; j < n_pairs; ++j) {
+            row.push_back(ac->PutSharedINGate((uint32_t) graph[i][j], bitlen));
         }
-        comp_graph.push_back(current_row);
+        s_cmp_graph.push_back(row);
     }
 
-    return comp_graph;
+    return s_cmp_graph;
 }
 
 
@@ -175,25 +179,25 @@ share_p BuildCountCyclesCircuit(cmp_graph s_length_matrix, CircuitW_p ac, uint32
 std::vector<std::vector<uint32_t>> readCompGraphFromFilePlain(uint32_t n_pairs) 
 {
     std::vector<std::vector<uint32_t>> comp_graph;
-    std::ifstream infile("comp_graph_plain.txt");
+
+    std::ifstream infile("../data/output/comp_graph_plain.json");
     std::string tmp;
 
-    // First,  informational line
-    infile >> tmp;
+    json jomp_graph;
+    infile >> jomp_graph;
+
+    if(((uint32_t)jomp_graph["n_pairs"]) != n_pairs) {
+        std::cout << "Number of pairs do not match!" <<std::endl;
+        return comp_graph;
+    }
+    
+    json graph = jomp_graph["graph"];
     for(size_t i = 0; i < n_pairs; ++i) {
-        // n_pairs lines, each line contains n_pairs entries
-        size_t count_entries = 0;
-        std::vector<uint32_t> current_row;
-        std::string line;
-        infile >> line;
-        std::istringstream s_stream(line);
-        while(std::getline(s_stream, tmp, ',') && count_entries++ < n_pairs) {
-            if(tmp.empty()) {
-                continue;
-            }
-            current_row.push_back(static_cast<uint32_t>(std::stoul(tmp)));
+        std::vector<uint32_t> row;
+        for(size_t j = 0; j < n_pairs; ++j) {
+            row.push_back((uint32_t) graph[i][j]);
         }
-        comp_graph.push_back(current_row);
+        comp_graph.push_back(row);
     }
 
     return comp_graph;

@@ -6,12 +6,17 @@
 #include "pair.hpp"
 #include "plain_data.hpp"
 
+// Json Lib
+#include "../../../extern/nlohmann_json/single_include/nlohmann/json.hpp"
+
 #include <exception>
 #include <fstream>
 #include <iostream>
 #include <string>
 #include <sstream>
 #include <vector>
+
+using json = nlohmann::json;
 
 void matching_circuit(e_role role, const std::string& address, uint16_t port, seclvl seclvl,
 		uint32_t bitlen, uint32_t nthreads, e_mt_gen_alg mt_alg, std::string path_to_data, 
@@ -65,8 +70,6 @@ void BuildMatchingCircuit(e_role role, const std::string& address, uint16_t port
     share_p s_zero_size = boolcirc->PutCONSGate((uint32_t) 0, bitlen);
 
     auto pairs = read_pair_data(boolcirc, role, bitlen, path_to_data, n_pairs);
-
-    // std::cout << "Reading successful" << std::endl;
 
     // Can be done variable to via command line or similar
     std::vector<uint32_t> weights = {1, 1, 1, 1, 1};
@@ -128,8 +131,6 @@ void BuildMatchingCircuit(e_role role, const std::string& address, uint16_t port
         matching_results.push_back(current_row);
     }
 
-    // std::cout << "Computed results of matching.\n" << std::endl;
-
     cmp_graph s_comp_graph; // Resulting graph
     for(size_t i = 0; i < n_pairs; ++i) {
         std::vector<share_p> current_row;
@@ -161,44 +162,38 @@ void BuildMatchingCircuit(e_role role, const std::string& address, uint16_t port
         s_comp_graph.push_back(current_row);
     }
     
-    // std::cout << "Computed compatibility graph.\n" << std::endl;
-
-    for(size_t i = 0; i < n_pairs; ++i) {
-        for(size_t j = 0; j < n_pairs; ++j) {
-            s_comp_graph[i][j] = arithmcirc->PutOUTGate(s_comp_graph[i][j], ALL);
-        } 
-    }
+    // for(size_t i = 0; i < n_pairs; ++i) {
+    //     for(size_t j = 0; j < n_pairs; ++j) {
+    //         s_comp_graph[i][j] = arithmcirc->PutOUTGate(s_comp_graph[i][j], ALL);
+    //     } 
+    // }
 
     prepareWritingCompGraphToFile(s_comp_graph, arithmcirc, n_pairs);
-
-    // std::cout << "Prepared shares for writing to file.\n" << std::endl;
 
     party->ExecCircuit();
 
     writeCompGraphToFile(s_comp_graph, role, n_pairs);
 
-    // std::cout << "Wrote compatibility graph to file.\n" << std::endl;
-
-    std::vector<std::vector<uint32_t>> comp_graph;
-    for(size_t i = 0; i < n_pairs; ++i) {
-        std::vector<uint32_t> current_row;
-        for(size_t j = 0; j < n_pairs; ++j) {
-            current_row.push_back(s_comp_graph[i][j]->get_clear_value<uint32_t>());
-        } 
-        comp_graph.push_back(current_row);
-    }
+    // std::vector<std::vector<uint32_t>> comp_graph;
+    // for(size_t i = 0; i < n_pairs; ++i) {
+    //     std::vector<uint32_t> current_row;
+    //     for(size_t j = 0; j < n_pairs; ++j) {
+    //         current_row.push_back(s_comp_graph[i][j]->get_clear_value<uint32_t>());
+    //     } 
+    //     comp_graph.push_back(current_row);
+    // }
 
     party->Reset();
     delete party;
 
-    std::cout << "\n\n#####\t#####\t#####\t#####\t#####" << std::endl;
-    std::cout << "Result:" << std::endl;
-    for(size_t i = 0; i < n_pairs; ++i) {
-        for(size_t j = 0; j < n_pairs; ++j) {
-            std::cout << comp_graph[i][j] << " ";
-        }
-        std::cout << "\n" << std::endl;
-    }
+    // std::cout << "\n\n#####\t#####\t#####\t#####\t#####" << std::endl;
+    // std::cout << "Result:" << std::endl;
+    // for(size_t i = 0; i < n_pairs; ++i) {
+    //     for(size_t j = 0; j < n_pairs; ++j) {
+    //         std::cout << comp_graph[i][j] << " ";
+    //     }
+    //     std::cout << "\n" << std::endl;
+    // }
 }
 
 
@@ -377,7 +372,6 @@ std::vector<std::shared_ptr<Pair>> read_pair_data(CircuitW_p bc, e_role role, ui
     return pairs;
 }
 
-
 share_p BuildCrossmatchCircuit(share_p s_hla_d, share_p s_hla_a_r, 
         CircuitW_p bc, uint32_t n_hla) 
 {    
@@ -386,19 +380,26 @@ share_p BuildCrossmatchCircuit(share_p s_hla_d, share_p s_hla_a_r,
 
     // Split simd share for further evaluation
     share_p split = bc->PutSplitterGate(res_and);
-    // Initiliase result share with 0
-    share_p s_incompatible = bc->PutINGate((uint32_t) 0, 1, SERVER);
 
-    // Reduce the splitted share to a single share
-    s_incompatible = bc->PutORGate(share_p(split->get_wire_ids_as_share(0)), s_incompatible);
-    for(size_t i = 1; i < n_hla; ++i) {
-        s_incompatible = bc->PutORGate(share_p(split->get_wire_ids_as_share(i)), s_incompatible);
+    std::vector<share_p> results;
+    for(size_t i = 0; i < n_hla; ++i) {
+        results.push_back(share_p(split->get_wire_ids_as_share(i)));
     }
-    
-    // Invert the result of the reduction
-    s_incompatible = bc->PutINVGate(s_incompatible);
-    
-    return s_incompatible;
+
+     while(results.size() > 1) {
+        uint32_t i = 0;
+        for(size_t j = 0; j < results.size();) {
+            if(j + 1 >= results.size()) {
+                results[i++] = results[j++];
+            } else {
+                results[i++] = bc->PutORGate(results[j], results[j+1]);
+            }
+            j += 2;
+        }
+        results.resize(i);
+    }
+
+    return bc->PutINVGate(results[0]);
 }
 
 
@@ -412,8 +413,6 @@ share_p BuildHLAmatchCircuit(share_p s_hla_d, share_p s_hla_r, share_p s_best, s
     share_p sum = bc->PutSplitterGate(mismatches);
     sum = bc->PutHammingWeightGate(sum);
 
-    // bc->PutPrintValueGate(sum, "HLA sum\t");
-
     share_p five = bc->PutCONSGate((uint32_t) 5, 32);
     share_p three = bc->PutCONSGate((uint32_t) 3, 32);
     share_p zero = bc->PutCONSGate((uint32_t) 0, 32);
@@ -423,9 +422,9 @@ share_p BuildHLAmatchCircuit(share_p s_hla_d, share_p s_hla_r, share_p s_best, s
 
     //Selection
     share_p sel1 = bc->PutMUXGate(s_ok, s_zero, ok);
-    share_p sel2 = bc->PutMUXGate(s_good, sel1, good);
-                
+    share_p sel2 = bc->PutMUXGate(s_good, sel1, good);       
     share_p out = bc->PutMUXGate(s_best, sel2, best);
+
     return out;
 }
 
@@ -441,21 +440,17 @@ share_p BuildABOmatchCircuit(std::vector<share_p> &s_abo_d, std::vector<share_p>
     rLeft = bc->PutORGate(tmp_l, tmp_r);
     rLeft = bc->PutINVGate(rLeft);
 
-    // Reset share_p
-    tmp_l.reset();
-    tmp_r.reset();
     // Evaluate the right part of the formula
     tmp = bc->PutINVGate(s_abo_d[0]);
     tmp_l = bc->PutANDGate(s_abo_r[1], tmp);
-    tmp.reset();
     tmp = bc->PutINVGate(s_abo_d[1]);
     tmp_r = bc->PutANDGate(s_abo_r[0], tmp);
     rRight = bc->PutORGate(tmp_l, tmp_r);
     
+    // Select the corresponding weight
     sel = bc->PutORGate(rLeft, rRight);
     out = bc->PutMUXGate(s_best, s_zero, sel);
 
-    // bc->PutPrintValueGate(out, "ABO weight\t");
     return out;
 }
 
@@ -477,7 +472,6 @@ share_p BuildAgematchCircuit(share_p s_age_d, share_p s_age_r, share_p s_best, s
     //Select correct solution
     out = bc->PutMUXGate(tmp2, tmp3, ydor);
 
-    // bc->PutPrintValueGate(out, "Age weight\t");
     return out;
 }
 
@@ -513,7 +507,6 @@ share_p BuildSizematchCircuit(share_p s_size_d, share_p s_size_r, share_p s_good
 
     out = bc->PutMUXGate(s_zero, s_good, tmp);
     
-    // bc->PutPrintValueGate(out, "Size weight\t");
 	return out;
 }
 
@@ -528,20 +521,27 @@ void prepareWritingCompGraphToFile(cmp_graph &comp_graph, CircuitW_p ac, uint32_
 }
 
 
-void writeCompGraphToFile(cmp_graph comp_graph, e_role role, uint32_t n_pairs) 
+void writeCompGraphToFile(cmp_graph &comp_graph, e_role role, uint32_t n_pairs) 
 {
     std::string roleString = "Client";
     if(role == SERVER) {
         roleString = "Server";
     }
-    std::ofstream outfile("comp_graph_"+roleString+".txt");
-    outfile << "#CompatibilityGraph" << std::endl;
+    std::ofstream outfile("../data/output/comp_graph_"+roleString+".json");
+    json jomp_graph;
+    jomp_graph["n_pairs"] = n_pairs;
+    json graph = json::array();
+
     for(size_t i = 0; i < n_pairs; ++i) {
+        json row = json::array();
         for(size_t j = 0; j < n_pairs; ++j) {
-            outfile << comp_graph[i][j]->get_clear_value<uint32_t>() << ",";
+            row.push_back(comp_graph[i][j]->get_clear_value<uint32_t>());
         }
-        outfile << "\n";
+        graph.push_back(row);
     }
+    jomp_graph["graph"] = graph;
+
+    outfile << jomp_graph;
 }
 
 
@@ -609,14 +609,14 @@ void testing(std::string path_to_data, const bool factors, uint32_t n_pairs, uin
 
     writeCompGraphToFilePlain(comp_graph_plain, n_pairs);
 
-    std::cout << "#####\t#####\t#####\t#####\t#####" << std::endl;
-    std::cout << "Expected:" << std::endl;
-    for(size_t i = 0; i < n_pairs; ++i) {
-        for(size_t j = 0; j < n_pairs; ++j) {
-            std::cout << comp_graph_plain[i][j] << " ";
-        }
-        std::cout << "\n" << std::endl;
-    }
+    // std::cout << "#####\t#####\t#####\t#####\t#####" << std::endl;
+    // std::cout << "Expected:" << std::endl;
+    // for(size_t i = 0; i < n_pairs; ++i) {
+    //     for(size_t j = 0; j < n_pairs; ++j) {
+    //         std::cout << comp_graph_plain[i][j] << " ";
+    //     }
+    //     std::cout << "\n" << std::endl;
+    // }
 }
 
 
@@ -839,13 +839,22 @@ uint32_t evalSizematch(uint32_t size_d, uint32_t size_r) {
 }
 
 
-void writeCompGraphToFilePlain(std::vector<std::vector<uint32_t>> &comp_graph, uint32_t n_pairs) {
-    std::ofstream outfile("comp_graph_plain.txt");
-    outfile << "#CompatibilityGraphPlain" << std::endl;
+void writeCompGraphToFilePlain(std::vector<std::vector<uint32_t>> &comp_graph, uint32_t n_pairs) 
+{
+    std::ofstream outfile("../data/output/comp_graph_plain.json");
+
+    json jomp_graph;
+    jomp_graph["n_pairs"] = n_pairs;
+    json graph = json::array();
+
     for(size_t i = 0; i < n_pairs; ++i) {
+        json row = json::array();
         for(size_t j = 0; j < n_pairs; ++j) {
-            outfile << comp_graph[i][j] << ",";
+            row.push_back(comp_graph[i][j]);
         }
-        outfile << "\n";
+        graph.push_back(row);
     }
+    jomp_graph["graph"] = graph;
+
+    outfile << jomp_graph;
 }

@@ -13,7 +13,7 @@ int32_t read_test_options(int32_t* argcp, char*** argvp, e_role* role,
 		uint16_t* port, int32_t* test_op, std::string* path, bool* factors,
 		uint32_t* n_pairs, uint32_t* n_hla, uint32_t* cycle_length) {
 
-	uint32_t int_role = 0, int_port = 0, bool_factors = 0, int_n_pairs = 0, int_n_hla = 0, 
+	uint32_t int_role = 0, int_port = 0, bool_factors = 1, int_n_pairs = 0, int_n_hla = 0, 
 			int_cycle_length = 0;
 
 	parsing_ctx options[] =
@@ -32,7 +32,7 @@ int32_t read_test_options(int32_t* argcp, char*** argvp, e_role* role,
 					"Single test (leave out for all operations), default: off",
 					false, false },
 					{ (void*) path, T_STR, "d", 
-					"Path pointing to the location where the data is stored. Default: '../data/input/data_1000'", 
+					"Path pointing to the location where the data is stored. Default: '../data/input/pairs_1000/'", 
 					false, false},  
 					{ (void*) &bool_factors, T_NUM, "f", "Factors to be included 0/1, default: 1",
 					false, false},   
@@ -96,14 +96,16 @@ int main(int argc, char** argv) {
 
 	seclvl seclvl = get_sec_lvl(secparam);
 
-	std::cout << "Role " << role << std::endl;
-
+	std::cout << "Number of pairs:\t" << n_pairs << std::endl;
+	std::cout << "Cycle length:\t" << cycle_length << std::endl;
+	std::cout << "Compute all factors:\t" << ((factors > (uint32_t) 0) ? "Yes" : "No") << "\n\n" << std::endl;
 	std::cout << "Part 1 Matching...\n" << std::endl;
 
 	matching_circuit(role, address, port, seclvl, bitlen,
 			nthreads, mt_alg, path, factors, n_pairs, n_hla);
 
 	std::cout << "\n\n##########" << std::endl;
+	std::cout << "\nPart1 succesful!\n" << std::endl;
 	std::cout << "##########\n" << std::endl;
 
 	std::cout << "\nPart 2 Compute number of cycles...\n" << std::endl;
@@ -112,12 +114,15 @@ int main(int argc, char** argv) {
 			                nthreads, mt_alg, n_pairs, cycle_length);
 
 	std::cout << "\n\n##########" << std::endl;
+	std::cout << "\nPart2 succesful!\n" << std::endl;
 	std::cout << "##########\n" << std::endl;
 
 	std::cout << "\nPart 3 find solution...\n" << std::endl;
-
+	
     find_largest_set_circuit(role, address, port, seclvl, bitlen,
 			nthreads, mt_alg, n_pairs, cycle_length, n_cycles);
+
+	std::cout << "\nPart3 succesful!\n" << std::endl;
 
 	return 0;
 }

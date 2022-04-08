@@ -29,7 +29,7 @@ int32_t read_test_options(int32_t* argcp, char*** argvp, e_role* role,
 					"Single test (leave out for all operations), default: off",
 					false, false },
 					{ (void*) path, T_STR, "d", 
-					"Path pointing to the location where the data is stored. Default: '../data/input/data_1000'", 
+					"Path pointing to the location where the data is stored. Default: '../data/input/pairs_100'", 
 					false, false},
 					{ (void*) &bool_factors, T_NUM, "f", "Factors to be included 0/1, default: 1",
 					false, false},   
@@ -77,7 +77,7 @@ int main(int argc, char** argv) {
 	uint32_t bitlen = 32, nvals = 8, secparam = 128, nthreads = 1, n_pairs = 10, n_hla = 50;
 	uint16_t port = 7766;
 	std::string address = "127.0.0.1";
-	std::string path = "../data/input/data_1000/";
+	std::string path = "../data/input/pairs_1000/";
 	int32_t test_op = -1;
 	e_mt_gen_alg mt_alg = MT_OT;
 	bool factors = true;
