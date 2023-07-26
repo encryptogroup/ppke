@@ -1,5 +1,8 @@
 # Efficient and Privacy-Preserving Kidney Exchange Protocol <br> SPIKE: Secure and Private Investigation of the Kidney Exchange problem
-This is part of a joint work of Timm Birka, Kay Hamacher, Tobias Kussel, Helen Möllering, and Thomas Schneider.
+By Timm Birka, Kay Hamacher, Tobias Kussel, Helen Möllering, and Thomas Schneider. (TU Darmstadt)
+
+In BMC Medical Informatics and Decision Making 2023. Paper available [here](https://arxiv.org/abs/2204.09937).
+
 
 This work is based on the [ABY framework](https://github.com/encryptogroup/ABY/) for efficient mixed-protocol secure two-party computation.
 
